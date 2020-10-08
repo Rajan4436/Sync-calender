@@ -1,21 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-  <title>Book a Meet</title>
+<html>
+  <head>
+    <title>Google Calendar API Quickstart</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="fullcalender/main.css">
+    <script src="https://code.jquery.com/jquery-3.0.0.min.js"  crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <link href="style.css" rel="stylesheet" type="text/css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+  </head>
+  <body>
 
-  <link rel="shortcut icon" href="g-raph.png">
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
-        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
-        crossorigin="anonymous">
-  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.1/css/all.css"
-        crossorigin="anonymous">
-  <link href="style.css" rel="stylesheet" type="text/css" />
-</head>
-
-<body>
-  <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
     <div class="container">
       <a href="/" class="navbar-brand">Book a Meet</a>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
@@ -26,9 +23,7 @@
         <ul id="authenticated-nav" class="navbar-nav mr-auto"></ul>
         <ul class="navbar-nav justify-content-end">
           <li class="nav-item">
-            <!--<a class="nav-link" href="https://developer.microsoft.com/graph/docs/concepts/overview" target="_blank">
-              <i class="fas fa-external-link-alt mr-1"></i>Docs
-            </a>-->
+            <button class="btn btn-info" id="authorize_button" style="">Authorize</button>
           </li>
           <li id="account-nav" class="nav-item"></li>
         </ul>
@@ -36,37 +31,287 @@
     </div>
   </nav>
 
-  <main id="main-container" role="main" class="container">
 
-  </main>
+    <div class="container" style="margin-top:30px">
+    
+      <!--Add buttons to initiate auth sequence and sign out-->
 
-  <!-- Bootstrap/jQuery -->
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
-          integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
-          crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
-          integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
-          crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
-          integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
-          crossorigin="anonymous"></script>
+      <pre id="content" style="white-space: pre-wrap;"></pre>
 
-  <!-- Moment.js -->
-  <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script>
-  <script src="https://momentjs.com/downloads/moment-timezone-with-data-10-year-range.js"></script>
+      <p id="loggedUsers"></p>
+      <div id='calendar'>Loading...</div>
 
-  <!-- MSAL -->
-  <script src="https://alcdn.msauth.net/browser/2.1.0/js/msal-browser.min.js"
-          integrity="sha384-EmYPwkfj+VVmL1brMS1h6jUztl4QMS8Qq8xlZNgIT/luzg7MAzDVrRa2JxbNmk/e"
-          crossorigin="anonymous"></script>
+    </div>
 
-  <!-- Graph SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client/lib/graph-js-sdk.js"></script>
+    <script type="text/javascript" src="fullcalender/main.js"></script>
+    <script type="text/javascript">
 
-  <script src="config.js"></script>
-  <script src="timezones.js"></script>
-  <script src="ui.js"></script>
-  <script src="auth.js"></script>
-  <script src="graph.js"></script>
-</body>
+
+      // $("#azure-sign").on("click", function(){
+      //   tenantID =  "6b592681-c05b-43e6-aa16-a6b41adb05d9"
+      //   clientID = "21199e75-5fd4-4f40-b2c7-9d92b013d453"
+      //   $("")
+      // })
+
+
+      // Array of API discovery doc URLs for APIs used by the quickstart
+      var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"];
+
+      // Authorization scopes required by the API; multiple scopes can be
+      // included, separated by spaces.
+      var SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+
+      var authorizeButton = document.getElementById('authorize_button');
+      var signoutButton = document.getElementById('signout_button');
+      
+      /**
+       *  On load, called to load the auth2 library and API client library.
+       */
+      function handleClientLoad() {
+        gapi.load('client:auth2', initClient);
+      }
+
+      /**
+       *  Initializes the API client library and sets up sign-in state
+       *  listeners.
+       */
+      function initClient() {
+        if (gapi.auth2.getAuthInstance()) {
+          gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+        }else{
+          updateSigninStatus(false)
+          authorizeButton.onclick = handleAuthClick;
+          // signoutButton.onclick = handleSignoutClick;
+        }
+      }
+
+      /**
+       *  Called when the signed in status changes, to update the UI
+       *  appropriately. After a sign-in, the API is called.
+       */
+      function updateSigninStatus(isSignedIn) {
+        loggedUsers = JSON.parse(localStorage.getItem("users"))
+        var usrs = "<b>Logged In users </b><br> <br>"
+        for(u in loggedUsers){ 
+          usrs += `${loggedUsers[u].email} <br>`
+        }
+
+        $("#loggedUsers").html(usrs)
+      }
+
+      // function grantPermissions(){
+      //   gapi.client.init({
+      //     apiKey: "AIzaSyAVbFO5_YuPRrWDk5SYVjzp7ZFcpEnwoFo",
+      //     clientId: "276740170414-sitfpgqiciq46bd268babm6uk8lot6o1.apps.googleusercontent.com",
+      //     discoveryDocs: DISCOVERY_DOCS,
+      //     scope: SCOPES
+      //   }).then(function () {
+      //     // Listen for sign-in state changes.
+      //     // gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+
+      //     // Handle the initial sign-in state.
+      //     updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+      //     gapi.auth2.getAuthInstance().signIn();
+      //     // signoutButton.onclick = handleSignoutClick;
+      //   }, function(error) {
+      //     // appendPre(JSON.stringify(error, null, 2));
+      //   });
+      // }
+
+      /**
+       *  Sign in the user upon button click.
+       */
+      function handleAuthClick(event){
+        gapi.auth2.authorize({
+          client_id: "276740170414-sitfpgqiciq46bd268babm6uk8lot6o1.apps.googleusercontent.com",
+          scope: SCOPES,
+          discoveryDocs: DISCOVERY_DOCS,
+          response_type: 'id_token permission email'
+        }, function(response) {
+          console.log(response)
+          if (response.error) {
+            // An error happened!
+            return;
+          }
+          
+          // The user authorized the application for the scopes requested.
+          var accessToken = response.access_token;
+          var idToken = response.id_token;
+
+          $.get("https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token="+ accessToken, function(res){
+            
+            if(response.access_token){
+              updateSigninStatus(true);
+              // gapi.auth2.getAuthInstance().signIn();
+              // signoutButton.onclick = handleSignoutClick;
+            }
+            
+            $.get(`https://www.googleapis.com/calendar/v3/calendars/${res.email}/events?access_token=${accessToken}`, function(result){
+              console.log(result)
+          
+              events = result.items
+              if (events.length > 0) {
+                times = []
+                for (i = 0; i < events.length; i++) {
+                  var event = events[i];
+                  var start = event.start.dateTime;
+                  var end = event.end.dateTime;
+                  
+                  times.push({
+                    title: event.summary,
+                    start: start,
+                    end: end
+                  })
+                }
+
+                new_user = {
+                  email: res.email,
+                  type: "google",
+                  access_token: accessToken
+                }
+
+                schedule = { 
+                  email: res.email,
+                  type: "google",
+                  events: times
+                }
+
+
+                users =  JSON.parse(localStorage.getItem("users")) || []
+                schedules = JSON.parse(localStorage.getItem("schedules")) || []
+
+                // Get current user schedule if exists delete it and add updated record
+              
+                schedules = deleteByValue(res.email, schedules)
+                schedules.push(schedule)
+                localStorage.setItem("schedules", JSON.stringify(schedules))
+                
+                users = deleteByValue(res.email, users)
+                users.push(new_user)
+                localStorage.setItem('users', JSON.stringify(users));
+
+                var calendarEl = document.getElementById('calendar');
+
+                var calendar = new FullCalendar.Calendar(calendarEl, {
+                  initialDate: '2020-10-12',
+                  editable: true,
+                  selectable: true,
+                  lazyFetching: false,
+                  businessHours: true,
+                  dayMaxEvents: true, // allow "more" link when too many events
+                  events: arrangeEvents()
+                });
+
+                calendar.render();
+                
+              } else {
+                return [];
+              }
+            })
+          })
+
+         
+          // You can also now use gapi.client to perform authenticated requests.
+        });
+      }
+
+      /**
+       *  Sign out the user upon button click.
+       */
+      function handleSignoutClick(event) {
+        gapi.auth2.getAuthInstance().signOut();
+      }
+
+
+      function arrangeEvents(){
+        schs = JSON.parse(localStorage.getItem("schedules"))
+        schedulesArray = []
+        for (var i = schs.length - 1; i >= 0; i--) {
+          schedulesArray.push(...schs[i].events)
+        }
+
+        console.log(schedulesArray)
+        return schedulesArray
+      }
+
+
+      function deleteByValue(val, arr) {
+        var key = null;
+        for (var k in arr){
+          if ((arr[k].email === val) && (arr[k].type == "google")) {
+            key = k;
+            break;
+          }
+        }
+        console.log(key)
+        if (key != null){
+          delete arr[key];
+        }
+
+        var filtered = arr.filter(function (el) {
+          return el != null;
+        });
+
+        return filtered
+      }
+
+      /**
+       * Append a pre element to the body containing the given message
+       * as its text node. Used to display the results of the API call.
+       *
+       * @param {string} message Text to be placed in pre element.
+       */
+      function appendPre(message) {
+        var pre = document.getElementById('content');
+        var textContent = document.createTextNode(message + '\n');
+        pre.appendChild(textContent);
+      }
+
+      /**
+       * Print the summary and start datetime/date of the next ten events in
+       * the authorized user's calendar. If no events are found an
+       * appropriate message is printed.
+       */
+      
+
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialDate: '2020-10-12',
+          editable: true,
+          selectable: true,
+          lazyFetching: false,
+          businessHours: true,
+          dayMaxEvents: true, // allow "more" link when too many events
+          events: arrangeEvents()
+        });
+
+        calendar.render();
+
+    </script>
+
+    <script async defer src="https://apis.google.com/js/api.js"
+      onload="this.onload=function(){};handleClientLoad()"
+      onreadystatechange="if (this.readyState === 'complete') this.onload()">
+    </script>
+  
+    <!-- Moment.js -->
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script>
+    <script src="https://momentjs.com/downloads/moment-timezone-with-data-10-year-range.js"></script>
+
+    <!-- MSAL -->
+    <script src="https://alcdn.msauth.net/browser/2.1.0/js/msal-browser.min.js"
+            integrity="sha384-EmYPwkfj+VVmL1brMS1h6jUztl4QMS8Qq8xlZNgIT/luzg7MAzDVrRa2JxbNmk/e"
+            crossorigin="anonymous"></script>
+
+    <!-- Graph SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client/lib/graph-js-sdk.js"></script>
+
+    <script src="config.js"></script>
+    <script src="timezones.js"></script>
+    <script src="ui.js"></script>
+    <script src="auth.js"></script>
+    <script src="graph.js"></script>
+
+  </body>
 </html>
