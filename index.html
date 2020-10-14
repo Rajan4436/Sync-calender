@@ -89,7 +89,12 @@
 
               <div class="form-group">
                 <label for="pwd">To:</label>
-                <input type="datetime-local" class="form-control" placeholder="Enter password" id="to">
+                <input type="datetime-local" class="form-control" placeholder="End Time" id="to">
+              </div>
+
+              <div class="form-group">
+                <label>Attendees:</label>
+                <input type="text" class="form-control" placeholder="Attendees list separated by comma" id="attendees">
               </div>
 
               <button class="btn btn-primary" id="create-event">Submit</button>
@@ -221,8 +226,10 @@
         from = (new Date($("#from").val())).toISOString()
         to = (new Date($("#to").val())).toISOString()
         email = $(".emails").val()
+        attendees = $("#attendees").val()
         console.log(email)
-        create_event(email.split("-")[0], summary, from, to, description, email.split("-")[1])   
+
+        create_event(email.split("-")[0], summary, from, to, description, email.split("-")[1], attendees.split(","))   
         return false;
       })
 
@@ -292,13 +299,19 @@
         })
       }
 
-      function create_event(email, summary, from, to, description, account_type){
+      function create_event(email, summary, from, to, description, account_type, attendeesList){
         users = JSON.parse(localStorage.getItem("users"))
         ACCESS_TOKEN = users.filter(function(el) {  if (el.email == email && el.type == account_type) { return el.access_token } })[0].access_token
         console.log(ACCESS_TOKEN)
+        attendeesObj = []
+        for (var i = attendeesList.length - 1; i >= 0; i--) {
+          attendeesObj.push({ "email": attendeesList[i].trim() })
+        }
+
+        console.log(attendeesObj)
         $.ajax({
           method: "POST",
-          url: `https://www.googleapis.com/calendar/v3/calendars/rajan4436@gmail.com/events?key=${API_KEY}`, 
+          url: `https://www.googleapis.com/calendar/v3/calendars/${email}/events?key=${API_KEY}`, 
           headers: { 
             'Authorization': `Bearer ${ACCESS_TOKEN}` 
           },
@@ -306,7 +319,9 @@
             "start": { "dateTime": from },
             "end": { "dateTime": to },
             "description": description,
-            "summary": summary
+            "summary": summary,
+            "attendees": attendeesObj,
+            "sendUpdates": "all"
           }),
           success: function(res){
             console.log(res)
