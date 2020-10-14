@@ -311,7 +311,7 @@
         console.log(attendeesObj)
         $.ajax({
           method: "POST",
-          url: `https://www.googleapis.com/calendar/v3/calendars/${email}/events?key=${API_KEY}`, 
+          url: `https://www.googleapis.com/calendar/v3/calendars/${email}/events?key=${API_KEY}&sendUpdates=all`, 
           headers: { 
             'Authorization': `Bearer ${ACCESS_TOKEN}` 
           },
@@ -320,8 +320,7 @@
             "end": { "dateTime": to },
             "description": description,
             "summary": summary,
-            "attendees": attendeesObj,
-            "sendUpdates": "all"
+            "attendees": attendeesObj
           }),
           success: function(res){
             console.log(res)
