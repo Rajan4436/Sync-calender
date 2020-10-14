@@ -74,7 +74,7 @@
 
               <div class="form-group">
                 <label for="email">Title:</label>
-                <input type="email" class="form-control" placeholder="Enter email" id="summary">
+                <input type="text" class="form-control" placeholder="Enter email" id="summary">
               </div>
 
               <div class="form-group">
@@ -92,7 +92,7 @@
                 <input type="datetime-local" class="form-control" placeholder="Enter password" id="to">
               </div>
 
-              <button type="submit" class="btn btn-primary" id="create-event">Submit</button>
+              <button class="btn btn-primary" id="create-event">Submit</button>
             </form>
           </div>
 
@@ -205,69 +205,7 @@
               updateSigninStatus(true);
             }
             
-            $.get(`https://www.googleapis.com/calendar/v3/calendars/${res.email}/events?access_token=${accessToken}`, function(result){
-              console.log(result)
-          
-              events = result.items
-              if (events.length > 0) {
-                times = []
-                for (i = 0; i < events.length; i++) {
-                  var event = events[i];
-                  var start = event.start.dateTime;
-                  var end = event.end.dateTime;
-                  
-                  times.push({
-                    title: event.summary,
-                    description: event.description,
-                    start: start,
-                    end: end
-                  })
-                }
-
-                new_user = {
-                  email: res.email,
-                  type: "google",
-                  access_token: accessToken
-                }
-
-                schedule = { 
-                  email: res.email,
-                  type: "google",
-                  events: times
-                }
-
-
-                users =  JSON.parse(localStorage.getItem("users")) || []
-                schedules = JSON.parse(localStorage.getItem("schedules")) || []
-
-                // Get current user schedule if exists delete it and add updated record
-              
-                schedules = deleteByValue(res.email, schedules)
-                schedules.push(schedule)
-                localStorage.setItem("schedules", JSON.stringify(schedules))
-                
-                users = deleteByValue(res.email, users)
-                users.push(new_user)
-                localStorage.setItem('users', JSON.stringify(users));
-
-                var calendarEl = document.getElementById('calendar');
-
-                var calendar = new FullCalendar.Calendar(calendarEl, {
-                  initialDate: '2020-10-12',
-                  editable: true,
-                  selectable: true,
-                  lazyFetching: false,
-                  businessHours: true,
-                  dayMaxEvents: true, // allow "more" link when too many events
-                  events: arrangeEvents()
-                });
-
-                calendar.render();
-                
-              } else {
-                return [];
-              }
-            })
+            update_event(res.email, accessToken)
           })
 
          
@@ -276,18 +214,86 @@
       }
 
 
-      $("#create-event").on("click", function(){
+      $("#create-event").on("click", function(en){
+        en.preventDefault()
         description = $("#description").val()
         summary = $("#summary").val()
-        from = $("#from").val()
-        to = $("#to").val()
+        from = (new Date($("#from").val())).toISOString()
+        to = (new Date($("#to").val())).toISOString()
         email = $(".emails").val()
         console.log(email)
         create_event(email.split("-")[0], summary, from, to, description, email.split("-")[1])   
-        // reload()     
+        return false;
       })
 
+      function update_event(email, accessToken){
+        $.get(`https://www.googleapis.com/calendar/v3/calendars/${email}/events?access_token=${accessToken}`, function(result){
+          console.log(result)
+      
+          events = result.items
+          if (events.length > 0) {
+            times = []
+            for (i = 0; i < events.length; i++) {
+              var event = events[i];
+              var start = event.start.dateTime;
+              var end = event.end.dateTime;
+              
+              times.push({
+                title: event.summary,
+                description: event.description,
+                start: start,
+                end: end
+              })
+            }
+
+            new_user = {
+              email: email,
+              type: "google",
+              access_token: accessToken
+            }
+
+            schedule = { 
+              email: email,
+              type: "google",
+              events: times
+            }
+
+
+            users =  JSON.parse(localStorage.getItem("users")) || []
+            schedules = JSON.parse(localStorage.getItem("schedules")) || []
+
+            // Get current user schedule if exists delete it and add updated record
+          
+            schedules = deleteByValue(email, schedules)
+            schedules.push(schedule)
+            localStorage.setItem("schedules", JSON.stringify(schedules))
+            
+            users = deleteByValue(email, users)
+            users.push(new_user)
+            localStorage.setItem('users', JSON.stringify(users));
+
+            var calendarEl = document.getElementById('calendar');
+
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+              initialDate: '2020-10-12',
+              editable: true,
+              selectable: true,
+              lazyFetching: false,
+              businessHours: true,
+              dayMaxEvents: true, // allow "more" link when too many events
+              events: arrangeEvents()
+            });
+
+            calendar.render();
+            
+          } else {
+            return [];
+          }
+        })
+      }
+
       function create_event(email, summary, from, to, description, account_type){
+        users = JSON.parse(localStorage.getItem("users"))
         ACCESS_TOKEN = users.filter(function(el) {  if (el.email == email && el.type == account_type) { return el.access_token } })[0].access_token
         console.log(ACCESS_TOKEN)
         $.ajax({
@@ -304,6 +310,9 @@
           }),
           success: function(res){
             console.log(res)
+            $('#myModal').modal('hide');
+            update_event(email, ACCESS_TOKEN)
+            // reload()     
           },
           error: function(err){
             console.log(err)
