@@ -10,12 +10,14 @@ async function signIn() {
     console.log('id_token acquired at: ' + new Date().toString());
     // Save the account username, needed for token acquisition
     sessionStorage.setItem('msalAccount', authResult.account.username);
+    signOut()
 
     // Get the user's profile from Graph
     user = await getUser();
     // Save the profile in session
     sessionStorage.setItem('graphUser', JSON.stringify(user));
-    updatePage(Views.home);
+    console.log(signout())
+    // updatePage(Views.home);
   } catch (error) {
     console.log(error);
     updatePage(Views.error, {

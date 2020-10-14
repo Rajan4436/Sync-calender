@@ -89,25 +89,25 @@ async function getEvents() {
   }
 }
 
-function deleteByValue(val, arr) {
-  var key = null;
-  for (var k in arr){
-    if ((arr[k].email === val) && (arr[k].type == "ms")) {
-      key = k;
-      break;
-    }
-  }
-  console.log(key)
-  if (key != null){
-    delete arr[key];
-  }
+// function deleteByValue(val, arr) {
+//   var key = null;
+//   for (var k in arr){
+//     if ((arr[k].email === val) && (arr[k].type == "ms")) {
+//       key = k;
+//       break;
+//     }
+//   }
+//   console.log(key)
+//   if (key != null){
+//     delete arr[key];
+//   }
 
-  var filtered = arr.filter(function (el) {
-    return el != null;
-  });
+//   var filtered = arr.filter(function (el) {
+//     return el != null;
+//   });
 
-  return filtered
-}
+//   return filtered
+// }
 
 
 async function createNewEvent() {
