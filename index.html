@@ -23,7 +23,10 @@
         <ul id="authenticated-nav" class="navbar-nav mr-auto"></ul>
         <ul class="navbar-nav justify-content-end">
           <li class="nav-item">
-            <button class="btn btn-info" id="authorize_button" style="">Authorize & Sync for Google</button>
+            <button class="btn btn-info" id="add-google" style="">Add Google Account</button>
+          </li>
+          <li id="" class="nav-item">
+            <button class="btn btn-info" id="add-microsoft" style="">Add MS Account</button>
           </li>
           <li>
             <!-- Button to Open the Modal -->
@@ -31,7 +34,6 @@
               Create New event
             </button>
           </li>
-          <li id="account-nav" class="nav-item"></li>
         </ul>
       </div>
     </div>
@@ -113,6 +115,11 @@
     <script type="text/javascript" src="fullcalender/main.js"></script>
     <script type="text/javascript">
 
+
+      const ORIGIN = window.location.origin;
+
+      const urlParams = new URLSearchParams(window.location.search);
+      
       // Array of API discovery doc URLs for APIs used by the quickstart
       var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"];
 
@@ -122,7 +129,7 @@
 
       var API_KEY = "AIzaSyAVbFO5_YuPRrWDk5SYVjzp7ZFcpEnwoFo"
 
-      var authorizeButton = document.getElementById('authorize_button');
+      var authorizeButton = document.getElementById('add-google');
       
       /**
        *  On load, called to load the auth2 library and API client library.
@@ -150,17 +157,17 @@
        */
       function updateSigninStatus(isSignedIn) {
         loggedUsers = JSON.parse(localStorage.getItem("users"))
-        var usrs = "<b>Logged In users </b><br> <br>"
+        var usrs = "<b>Active Accounts </b><br> <br>"
         for(u in loggedUsers){ 
-          usrs += `${loggedUsers[u].email} <br>`
+          usrs += `${loggedUsers[u].email} - ${loggedUsers[u].type} <br>`
         }
 
         $("#loggedUsers").html(usrs)
       }
 
-      function deleteByValue(val, arr) {
+      function deleteByValue(val, arr, type) {
         for (var k in arr){
-          if ((arr[k].email === val) && (arr[k].type == "google")) {
+          if ((arr[k].email === val) && (arr[k].type == type)) {
             if (k != null){
               delete arr[k];
             }
@@ -210,7 +217,7 @@
               updateSigninStatus(true);
             }
             
-            update_event(res.email, accessToken)
+            update_google_event(res.email, accessToken)
           })
 
          
@@ -218,6 +225,56 @@
         });
       }
 
+
+      // Azure details 
+
+
+      $("#add-microsoft").on("click", function(){
+        window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?scope=openid Calendars.ReadWrite User.Read&response_type=code&client_id=866d7f5c-8da4-4540-a2e3-6ae63b2a52aa&response_mode=query&redirect_uri=${ORIGIN}&code_challenge=gRrmOpKL5zT4qhfPHjD1Xt4w0amUtCSzrghOxWVZGPc&code_challenge_method=S256&state=12345`
+      })
+
+      if (urlParams.get('code')) {
+        console.log(urlParams.get('code'))
+        // window.location.href = `https://login.microsoftonline.com/f8cdef31-a31e-4b4a-93e4-5f571e91255a/oauth2/v2.0/token?client_id=866d7f5c-8da4-4540-a2e3-6ae63b2a52aa&scope=openid Calendars.ReadWrite User.Read&code=M.R3_BL2.28302b24-8607-be1f-4680-1f9df190615e&redirect_uri=http://localhost:8000/&grant_type=authorization_code&client_secret=BaqHWV1ICvqN0Zo1T~y32~~5wEZ0TUwG_-`
+        data = { 
+          "client_id":"866d7f5c-8da4-4540-a2e3-6ae63b2a52aa",
+          "scope":"openid Calendars.ReadWrite User.Read",
+          "code": urlParams.get('code'),
+          "grant_type":"authorization_code",
+          "redirect_uri":"http://localhost:8000",
+          "code_verifier":"oVgjI2bz5gpnIUokNDRV8WjVofhCo0to6Q~Z0tJf~IdNKsLFWcF.c~AhpCvE_WUb50adzRMnw-3NARvK2nrxj_jXxImwOBZStuT9H0UrTWsPfRFi3gkGGvidjD8_4BWz"
+        }
+
+        urlEncodedData = new URLSearchParams(data).toString()
+
+        $.ajax({
+          url: `https://login.microsoftonline.com/common/oauth2/v2.0/token`, 
+          method: "post",
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          data: urlEncodedData, 
+          success: function(res){
+            console.log(res)
+
+            $.ajax({
+              url: "https://graph.microsoft.com/v1.0/me",
+              method: "get",
+              headers: { 'Authorization': `Bearer ${res.access_token}` },
+              success: function(user){
+                console.log(user)
+
+                update_ms_event(user.userPrincipalName, res.access_token, res.refresh_token)
+              }
+            })
+          },
+          error: function(err){
+            console.log(err)
+          }
+        })
+      }
+
+      // if (urlParams.get('access_token')) {
+      //   console.log(urlParams.get('access_token'))
+      // }
 
       $("#create-event").on("click", function(en){
         en.preventDefault()
@@ -233,7 +290,8 @@
         return false;
       })
 
-      function update_event(email, accessToken){
+    
+      function update_google_event(email, accessToken){
         $.get(`https://www.googleapis.com/calendar/v3/calendars/${email}/events?access_token=${accessToken}`, function(result){
           console.log(result)
       
@@ -253,45 +311,7 @@
               })
             }
 
-            new_user = {
-              email: email,
-              type: "google",
-              access_token: accessToken
-            }
-
-            schedule = { 
-              email: email,
-              type: "google",
-              events: times
-            }
-
-
-            users =  JSON.parse(localStorage.getItem("users")) || []
-            schedules = JSON.parse(localStorage.getItem("schedules")) || []
-
-            // Get current user schedule if exists delete it and add updated record
-          
-            schedules = deleteByValue(email, schedules)
-            schedules.push(schedule)
-            localStorage.setItem("schedules", JSON.stringify(schedules))
-            
-            users = deleteByValue(email, users)
-            users.push(new_user)
-            localStorage.setItem('users', JSON.stringify(users));
-
-            var calendarEl = document.getElementById('calendar');
-
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-              initialDate: '2020-10-12',
-              editable: true,
-              selectable: true,
-              lazyFetching: false,
-              businessHours: true,
-              dayMaxEvents: true, // allow "more" link when too many events
-              events: arrangeEvents()
-            });
-
-            calendar.render();
+            storeData(email, times, accessToken, "", "google")
             
           } else {
             return [];
@@ -299,39 +319,163 @@
         })
       }
 
-      function create_event(email, summary, from, to, description, account_type, attendeesList){
-        users = JSON.parse(localStorage.getItem("users"))
-        ACCESS_TOKEN = users.filter(function(el) {  if (el.email == email && el.type == account_type) { return el.access_token } })[0].access_token
-        console.log(ACCESS_TOKEN)
-        attendeesObj = []
-        for (var i = attendeesList.length - 1; i >= 0; i--) {
-          attendeesObj.push({ "email": attendeesList[i].trim() })
-        }
-
-        console.log(attendeesObj)
+      function update_ms_event(email, accessToken, refreshToken){
         $.ajax({
-          method: "POST",
-          url: `https://www.googleapis.com/calendar/v3/calendars/${email}/events?key=${API_KEY}&sendUpdates=all`, 
+          url: `https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=2019-10-01T01:00:00&endDateTime=2020-10-31T23:00:00`,
+          method: "get",
           headers: { 
-            'Authorization': `Bearer ${ACCESS_TOKEN}` 
+              'Authorization': `Bearer ${accessToken}` 
           },
-          data: JSON.stringify({
-            "start": { "dateTime": from },
-            "end": { "dateTime": to },
-            "description": description,
-            "summary": summary,
-            "attendees": attendeesObj
-          }),
-          success: function(res){
-            console.log(res)
-            $('#myModal').modal('hide');
-            update_event(email, ACCESS_TOKEN)
-            // reload()     
+          success: function(result){
+            console.log(result)
+        
+            events = result.value
+            if (events.length > 0) {
+              times = []
+              for (i = 0; i < events.length; i++) {
+                var event = events[i];
+                var start = event.start.dateTime;
+                var end = event.end.dateTime;
+                
+                times.push({
+                  title: event.subject,
+                  description: event.bodyPreview,
+                  start: start,
+                  end: end
+                })
+              }
+
+              storeData(email, times, accessToken, refreshToken, "ms") 
+            }
           },
           error: function(err){
             console.log(err)
-          }
+          }          
         })
+      }
+
+      function storeData(email, times, accessToken, refreshToken, account_type){
+        new_user = {
+          email: email,
+          type: account_type,
+          access_token: accessToken,
+          refresh_token: refreshToken
+        }
+
+        schedule = { 
+          email: email,
+          type: account_type,
+          events: times
+        }
+
+        users =  JSON.parse(localStorage.getItem("users")) || []
+        schedules = JSON.parse(localStorage.getItem("schedules")) || []
+
+        // Get current user schedule if exists delete it and add updated record
+      
+        schedules = deleteByValue(email, schedules, account_type)
+        schedules.push(schedule)
+        localStorage.setItem("schedules", JSON.stringify(schedules))
+        
+        users = deleteByValue(email, users, account_type)
+        users.push(new_user)
+        localStorage.setItem('users', JSON.stringify(users));
+
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+          initialDate: '2020-10-12',
+          editable: true,
+          selectable: true,
+          lazyFetching: false,
+          businessHours: true,
+          dayMaxEvents: true, // allow "more" link when too many events
+          events: arrangeEvents()
+        });
+
+        calendar.render();
+      }
+
+
+      function create_event(email, summary, from, to, description, account_type, attendeesList){
+        users = JSON.parse(localStorage.getItem("users"))
+        ACCESS_TOKEN = users.filter(function(el) {  if (el.email == email && el.type == account_type) { return el.access_token } })[0].access_token
+        REFRESH_TOKEN = users.filter(function(el) {  if (el.email == email && el.type == account_type) { return el.access_token } })[0].refresh_token
+        console.log(ACCESS_TOKEN)
+        
+        if (account_type === "google") {
+          attendeesObj = []
+          for (var i = attendeesList.length - 1; i >= 0; i--) {
+            attendeesObj.push({ "email": attendeesList[i].trim() })
+          }
+
+          console.log(attendeesObj)
+
+          $.ajax({
+            method: "POST",
+            url: `https://www.googleapis.com/calendar/v3/calendars/${email}/events?key=${API_KEY}&sendUpdates=all`, 
+            headers: { 
+              'Authorization': `Bearer ${ACCESS_TOKEN}` 
+            },
+            data: JSON.stringify({
+              "start": { "dateTime": from },
+              "end": { "dateTime": to },
+              "description": description,
+              "summary": summary,
+              "attendees": attendeesObj
+            }),
+            success: function(res){
+              console.log(res)
+              $('#myModal').modal('hide');
+              update_google_event(email, ACCESS_TOKEN)
+              // reload()     
+            },
+            error: function(err){
+              console.log(err)
+            }
+          })
+
+        }else if(account_type === "ms"){
+
+          attendeesObj = []
+          for (var i = attendeesList.length - 1; i >= 0; i--) {
+            attendeesObj.push({ 
+              "EmailAddress": {
+                "Address": attendeesList[i].trim(),
+                "Name": ""
+              },
+              "Type": "Required"
+            })
+          }
+
+          eventData = {
+            "start": { "DateTime": from, "TimeZone": "UTC" },
+            "end": { "DateTime": to, "TimeZone": "UTC" },
+            "Body": { "ContentType": "HTML",  "Content" : description },
+            "Subject": summary,
+            "Attendees": attendeesObj
+          }
+
+          console.log(eventData)
+          
+          $.ajax({
+            url: `https://graph.microsoft.com/v1.0/me/events`,
+            method: "post",
+            headers: { 
+              'Authorization': `Bearer ${ACCESS_TOKEN}` ,
+              "Content-Type" : "application/json"
+            },
+            data: JSON.stringify(eventData),
+            success: function(res){
+              console.log(res)
+              $('#myModal').modal('hide');
+              update_ms_event(email, ACCESS_TOKEN, REFRESH_TOKEN)
+            },
+            error: function(err){
+              console.log(err)
+            }
+          })
+        }
       }
 
       function arrangeEvents(){
@@ -377,20 +521,5 @@
     <!-- Moment.js -->
     <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script>
     <script src="https://momentjs.com/downloads/moment-timezone-with-data-10-year-range.js"></script>
-
-    <!-- MSAL -->
-    <script src="https://alcdn.msauth.net/browser/2.1.0/js/msal-browser.min.js"
-            integrity="sha384-EmYPwkfj+VVmL1brMS1h6jUztl4QMS8Qq8xlZNgIT/luzg7MAzDVrRa2JxbNmk/e"
-            crossorigin="anonymous"></script>
-
-    <!-- Graph SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@microsoft/microsoft-graph-client/lib/graph-js-sdk.js"></script>
-
-    <script src="config.js"></script>
-    <script src="timezones.js"></script>
-    <script src="ui.js"></script>
-    <script src="auth.js"></script>
-    <script src="graph.js"></script>
-
   </body>
 </html>
