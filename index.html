@@ -28,6 +28,9 @@
           <li id="" class="nav-item">
             <button class="btn btn-info" id="add-microsoft" style="">Add MS Account</button>
           </li>
+          <li class="nav-item">
+            <button class="btn btn-info" id="sync" style="">Sync Accounts</button>
+          </li>
           <li>
             <!-- Button to Open the Modal -->
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">
@@ -76,7 +79,7 @@
 
               <div class="form-group">
                 <label for="email">Title:</label>
-                <input type="text" class="form-control" placeholder="Enter email" id="summary">
+                <input type="text" class="form-control" placeholder="Enter Title" id="summary">
               </div>
 
               <div class="form-group">
@@ -86,12 +89,12 @@
 
               <div class="form-group">
                 <label for="pwd">From:</label>
-                <input type="datetime-local" class="form-control" placeholder="Enter password" id="from">
+                <input type="datetime-local" class="form-control" id="from">
               </div>
 
               <div class="form-group">
                 <label for="pwd">To:</label>
-                <input type="datetime-local" class="form-control" placeholder="End Time" id="to">
+                <input type="datetime-local" class="form-control" id="to">
               </div>
 
               <div class="form-group">
@@ -271,6 +274,52 @@
           }
         })
       }
+
+
+      $("#sync").on("click", function(res){
+        users =  JSON.parse(localStorage.getItem("users")) || []
+        for (var i = users.length - 1; i >= 0; i--) {
+          console.log(users[i])
+          if (users[i].type === "ms") {
+
+              data = { 
+                "client_id":"866d7f5c-8da4-4540-a2e3-6ae63b2a52aa",
+                "scope":"openid Calendars.ReadWrite User.Read",
+                "grant_type":"refresh_token",
+                "redirect_uri": ORIGIN,
+                "refresh_token" : users[i].refresh_token,
+                "code_verifier":"oVgjI2bz5gpnIUokNDRV8WjVofhCo0to6Q~Z0tJf~IdNKsLFWcF.c~AhpCvE_WUb50adzRMnw-3NARvK2nrxj_jXxImwOBZStuT9H0UrTWsPfRFi3gkGGvidjD8_4BWz"
+              }
+
+              urlEncodedData = new URLSearchParams(data).toString()
+
+              $.ajax({
+                url: `https://login.microsoftonline.com/common/oauth2/v2.0/token`, 
+                method: "post",
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                data: urlEncodedData, 
+                success: function(res){
+                  console.log(res)
+
+                  $.ajax({
+                    url: "https://graph.microsoft.com/v1.0/me",
+                    method: "get",
+                    headers: { 'Authorization': `Bearer ${res.access_token}` },
+                    success: function(user){
+                      console.log(user)
+
+                      update_ms_event(user.userPrincipalName, res.access_token, res.refresh_token)
+                    }
+                  })
+                },
+                error: function(err){
+                  console.log(err)
+                }
+              })
+          }
+        }
+      })
+
 
       // if (urlParams.get('access_token')) {
       //   console.log(urlParams.get('access_token'))
