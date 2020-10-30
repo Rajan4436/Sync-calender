@@ -9,6 +9,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <link href="style.css" rel="stylesheet" type="text/css" />
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <style type="text/css">
+      .dot {
+        height: 15px;
+        width: 15px;
+        background-color: #bbb;
+        border-radius: 50%;
+        display: inline-block;
+      }
+    </style>
   </head>
   <body>
 
@@ -28,10 +37,10 @@
           <li id="" class="nav-item">
             <button class="btn btn-info" id="add-microsoft" style="">Add MS Account</button>
           </li>
-          <li class="nav-item">
+          <li class="nav-item actions">
             <button class="btn btn-info" id="sync" style="">Sync Accounts</button>
           </li>
-          <li>
+          <li class="actions">
             <!-- Button to Open the Modal -->
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal">
               Create New event
@@ -116,6 +125,10 @@
     </div>
 
     <script type="text/javascript" src="fullcalender/main.js"></script>
+     <!-- Moment.js -->
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script>
+    <script src="https://momentjs.com/downloads/moment-timezone-with-data-10-year-range.js"></script>
+
     <script type="text/javascript">
 
 
@@ -123,50 +136,31 @@
 
       const urlParams = new URLSearchParams(window.location.search);
       
-      // Array of API discovery doc URLs for APIs used by the quickstart
       var DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"];
 
       // Authorization scopes required by the API; multiple scopes can be
       // included, separated by spaces.
-      var SCOPES = "https://www.googleapis.com/auth/calendar";
+      var SCOPES = "https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email";
 
       var API_KEY = "AIzaSyAVbFO5_YuPRrWDk5SYVjzp7ZFcpEnwoFo"
-
-      var authorizeButton = document.getElementById('add-google');
-      
-      /**
-       *  On load, called to load the auth2 library and API client library.
-       */
-      function handleClientLoad() {
-        gapi.load('client:auth2', initClient);
-      }
 
       /**
        *  Initializes the API client library and sets up sign-in state
        *  listeners.
        */
-      function initClient() {
-        if (gapi.auth2.getAuthInstance()) {
-          gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
-        }else{
-          updateSigninStatus(false)
-          authorizeButton.onclick = handleAuthClick;
-        }
-      }
 
-      /**
-       *  Called when the signed in status changes, to update the UI
-       *  appropriately. After a sign-in, the API is called.
-       */
       function updateSigninStatus(isSignedIn) {
         loggedUsers = JSON.parse(localStorage.getItem("users"))
         var usrs = "<b>Active Accounts </b><br> <br>"
         for(u in loggedUsers){ 
           usrs += `${loggedUsers[u].email} - ${loggedUsers[u].type} <br>`
         }
-
-        $("#loggedUsers").html(usrs)
+        google = '<span style="background-color: #ff9800;" class="dot">  </span> Google'
+        ms = '<span style="background-color: #0067B8;" class="dot">  </span> Outlook'
+        $("#loggedUsers").html(usrs).append(google + ' ' + ms)
       }
+
+
 
       function deleteByValue(val, arr, type) {
         for (var k in arr){
@@ -187,6 +181,11 @@
 
       logged_users =  JSON.parse(localStorage.getItem("users")) || []
       options = ""
+      if (logged_users.length == 0) {
+        $(".actions").hide()
+      }else{
+        updateSigninStatus(true)
+      }
       for (var i = 0; i < logged_users.length; i++) {
         options += `<option value="${logged_users[i].email}-${logged_users[i].type}">${logged_users[i].email} - ${logged_users[i].type} </option>`
       }
@@ -197,35 +196,49 @@
       /**
        *  Sign in the user upon button click.
        */
-      function handleAuthClick(event){
-        gapi.auth2.authorize({
-          client_id: "276740170414-sitfpgqiciq46bd268babm6uk8lot6o1.apps.googleusercontent.com",
-          scope: SCOPES,
-          discoveryDocs: DISCOVERY_DOCS,
-          response_type: 'id_token permission email'
-        }, function(response) {
-          console.log(response)
-          if (response.error) {
-            // An error happened!
-            return;
+
+      $("#add-google").on("click", function(){
+        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?client_id=276740170414-sitfpgqiciq46bd268babm6uk8lot6o1.apps.googleusercontent.com&response_type=code&state=1111&scope=${SCOPES}&redirect_uri=${ORIGIN}&prompt=consent&access_type=offline`
+
+        // http://localhost:8000/?state=state_parameter_passthrough_value
+        // &code=4/0AfDhmrhZPX21hJgCt_1DlED7l7f8Px-5Yt-60TKEzPrELDGftoMzOV8v3K_8JeVE7gTGaQ
+        // &scope=email%20profile%20https://www.googleapis.com/auth/calendar.readonly%20https://www.googleapis.com/auth/calendar%20openid%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile
+        // &authuser=0&prompt=consent
+      })
+
+      if (urlParams.get('code') && (urlParams.get('state') == 1111)) {
+        console.log(urlParams.get('code'))
+        // window.location.href = `https://login.microsoftonline.com/f8cdef31-a31e-4b4a-93e4-5f571e91255a/oauth2/v2.0/token?client_id=866d7f5c-8da4-4540-a2e3-6ae63b2a52aa&scope=openid Calendars.ReadWrite User.Read&code=M.R3_BL2.28302b24-8607-be1f-4680-1f9df190615e&redirect_uri=http://localhost:8000/&grant_type=authorization_code&client_secret=BaqHWV1ICvqN0Zo1T~y32~~5wEZ0TUwG_-`
+        data = { 
+          "client_id":"276740170414-sitfpgqiciq46bd268babm6uk8lot6o1.apps.googleusercontent.com",
+          "client_secret": "0FZc1LbrterttvTjtf5Hit6Z",
+          "code": urlParams.get('code'),
+          "grant_type":"authorization_code",
+          "redirect_uri": ORIGIN
+          // "code_verifier":"oVgjI2bz5gpnIUokNDRV8WjVofhCo0to6Q~Z0tJf~IdNKsLFWcF.c~AhpCvE_WUb50adzRMnw-3NARvK2nrxj_jXxImwOBZStuT9H0UrTWsPfRFi3gkGGvidjD8_4BWz"
+        }
+
+        urlEncodedData = new URLSearchParams(data).toString()
+
+        $.ajax({
+          url: `https://oauth2.googleapis.com/token`, 
+          method: "post",
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          data: urlEncodedData, 
+          success: function(response){
+            console.log(response)
+            var accessToken = response.access_token;
+
+            $.get("https://www.googleapis.com/oauth2/v2/userinfo?alt=json&access_token="+ accessToken, function(res){  
+              console.log(res)
+              console.log(response)
+              update_google_event(res.email, accessToken, (response.refresh_token || ""))
+            })
+          },
+          error: function(err){
+            console.log(err)
           }
-          
-          // The user authorized the application for the scopes requested.
-          var accessToken = response.access_token;
-          var idToken = response.id_token;
-
-          $.get("https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token="+ accessToken, function(res){
-            
-            if(response.access_token){
-              updateSigninStatus(true);
-            }
-            
-            update_google_event(res.email, accessToken)
-          })
-
-         
-          // You can also now use gapi.client to perform authenticated requests.
-        });
+        })
       }
 
 
@@ -236,7 +249,7 @@
         window.location.href = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?scope=openid Calendars.ReadWrite User.Read&response_type=code&client_id=866d7f5c-8da4-4540-a2e3-6ae63b2a52aa&response_mode=query&redirect_uri=${ORIGIN}&code_challenge=gRrmOpKL5zT4qhfPHjD1Xt4w0amUtCSzrghOxWVZGPc&code_challenge_method=S256&state=12345`
       })
 
-      if (urlParams.get('code')) {
+      if (urlParams.get('code') && (urlParams.get('state') == 12345)) {
         console.log(urlParams.get('code'))
         // window.location.href = `https://login.microsoftonline.com/f8cdef31-a31e-4b4a-93e4-5f571e91255a/oauth2/v2.0/token?client_id=866d7f5c-8da4-4540-a2e3-6ae63b2a52aa&scope=openid Calendars.ReadWrite User.Read&code=M.R3_BL2.28302b24-8607-be1f-4680-1f9df190615e&redirect_uri=http://localhost:8000/&grant_type=authorization_code&client_secret=BaqHWV1ICvqN0Zo1T~y32~~5wEZ0TUwG_-`
         data = { 
@@ -264,8 +277,9 @@
               headers: { 'Authorization': `Bearer ${res.access_token}` },
               success: function(user){
                 console.log(user)
-
+                console.log(res)
                 update_ms_event(user.userPrincipalName, res.access_token, res.refresh_token)
+                // window.location.href = ORIGIN
               }
             })
           },
@@ -280,14 +294,15 @@
         users =  JSON.parse(localStorage.getItem("users")) || []
         for (var i = users.length - 1; i >= 0; i--) {
           console.log(users[i])
-          if (users[i].type === "ms") {
+          user = users[i]
+          if (user.type === "ms") {
 
               data = { 
                 "client_id":"866d7f5c-8da4-4540-a2e3-6ae63b2a52aa",
                 "scope":"openid Calendars.ReadWrite User.Read",
                 "grant_type":"refresh_token",
                 "redirect_uri": ORIGIN,
-                "refresh_token" : users[i].refresh_token,
+                "refresh_token" : user.refresh_token,
                 "code_verifier":"oVgjI2bz5gpnIUokNDRV8WjVofhCo0to6Q~Z0tJf~IdNKsLFWcF.c~AhpCvE_WUb50adzRMnw-3NARvK2nrxj_jXxImwOBZStuT9H0UrTWsPfRFi3gkGGvidjD8_4BWz"
               }
 
@@ -300,33 +315,55 @@
                 data: urlEncodedData, 
                 success: function(res){
                   console.log(res)
-
-                  $.ajax({
-                    url: "https://graph.microsoft.com/v1.0/me",
-                    method: "get",
-                    headers: { 'Authorization': `Bearer ${res.access_token}` },
-                    success: function(user){
-                      console.log(user)
-
-                      update_ms_event(user.userPrincipalName, res.access_token, res.refresh_token)
-                    }
-                  })
+                  console.log(user)
+                  update_ms_event(user.email, res.access_token, res.refresh_token)
                 },
                 error: function(err){
                   console.log(err)
                 }
               })
+          }else if(user.type === "google"){
+            
+            data = {
+              "grant_type":"refresh_token",
+              "client_id": "276740170414-sitfpgqiciq46bd268babm6uk8lot6o1.apps.googleusercontent.com",
+              "client_secret": "0FZc1LbrterttvTjtf5Hit6Z",
+              "refresh_token" : user.refresh_token
+            }
+
+            urlEncodedData = new URLSearchParams(data).toString()
+            
+            $.ajax({
+              url: "https://oauth2.googleapis.com/token",
+              method: "post",
+              data: urlEncodedData,
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              success: function(response){
+                console.log(response)
+                var accessToken = response.access_token;
+                update_google_event(user.email, accessToken, user.refresh_token)
+                
+              },
+              error: function(err){
+                console.log(err)
+              }
+            })
           }
         }
       })
 
 
-      // if (urlParams.get('access_token')) {
-      //   console.log(urlParams.get('access_token'))
-      // }
-
       $("#create-event").on("click", function(en){
         en.preventDefault()
+        inputs = $('form input')
+        for (var i = inputs.length - 1; i >= 0; i--) {
+          if ($(inputs[i]).val()){
+            console.log($(inputs[i]).val())
+          }else{
+            alert("Fill All details")
+            return false;
+          }
+        }
         description = $("#description").val()
         summary = $("#summary").val()
         from = (new Date($("#from").val())).toISOString()
@@ -334,13 +371,12 @@
         email = $(".emails").val()
         attendees = $("#attendees").val()
         console.log(email)
-
         create_event(email.split("-")[0], summary, from, to, description, email.split("-")[1], attendees.split(","))   
         return false;
       })
 
     
-      function update_google_event(email, accessToken){
+      function update_google_event(email, accessToken, refreshToken){
         $.get(`https://www.googleapis.com/calendar/v3/calendars/${email}/events?access_token=${accessToken}`, function(result){
           console.log(result)
       
@@ -356,11 +392,12 @@
                 title: event.summary,
                 description: event.description,
                 start: start,
-                end: end
+                end: end,
+                color:'#ff9800' // yellow google
               })
             }
 
-            storeData(email, times, accessToken, "", "google")
+            storeData(email, times, accessToken, refreshToken, "google")
             
           } else {
             return [];
@@ -370,7 +407,7 @@
 
       function update_ms_event(email, accessToken, refreshToken){
         $.ajax({
-          url: `https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=2019-10-01T01:00:00&endDateTime=2020-10-31T23:00:00`,
+          url: `https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=2020-07-01T01:00:00&endDateTime=2021-10-31T23:00:00`,
           method: "get",
           headers: { 
               'Authorization': `Bearer ${accessToken}` 
@@ -390,7 +427,8 @@
                   title: event.subject,
                   description: event.bodyPreview,
                   start: start,
-                  end: end
+                  end: end,
+                  color:'#0067B8' // blue google
                 })
               }
 
@@ -433,7 +471,7 @@
         var calendarEl = document.getElementById('calendar');
 
         var calendar = new FullCalendar.Calendar(calendarEl, {
-          initialDate: '2020-10-12',
+          initialDate: moment().format('YYYY-MM-DD'),
           editable: true,
           selectable: true,
           lazyFetching: false,
@@ -443,6 +481,7 @@
         });
 
         calendar.render();
+        window.location.href = ORIGIN
       }
 
 
@@ -476,10 +515,10 @@
             success: function(res){
               console.log(res)
               $('#myModal').modal('hide');
-              update_google_event(email, ACCESS_TOKEN)
-              // reload()     
+              update_google_event(email, ACCESS_TOKEN, REFRESH_TOKEN)
             },
             error: function(err){
+              alert("Token Invalid, Please Sync to refresh")
               console.log(err)
             }
           })
@@ -522,6 +561,7 @@
             },
             error: function(err){
               console.log(err)
+              alert("Token Invalid, Please Sync to refresh")
             }
           })
         }
@@ -529,13 +569,15 @@
 
       function arrangeEvents(){
         schs = JSON.parse(localStorage.getItem("schedules"))
-        schedulesArray = []
-        for (var i = schs.length - 1; i >= 0; i--) {
-          schedulesArray.push(...schs[i].events)
-        }
+        if(schs){
+          schedulesArray = []
+          for (var i = schs.length - 1; i >= 0; i--) {
+            schedulesArray.push(...schs[i].events)
+          }
 
-        console.log(schedulesArray)
-        return schedulesArray
+          console.log(schedulesArray)
+          return schedulesArray
+        }
       }
 
 
@@ -549,7 +591,7 @@
         var calendarEl = document.getElementById('calendar');
 
         var calendar = new FullCalendar.Calendar(calendarEl, {
-          initialDate: '2020-10-12',
+          initialDate: moment().format('YYYY-MM-DD'),
           editable: true,
           selectable: true,
           lazyFetching: false,
@@ -561,14 +603,5 @@
         calendar.render();
 
     </script>
-
-    <script async defer src="https://apis.google.com/js/api.js"
-      onload="this.onload=function(){};handleClientLoad()"
-      onreadystatechange="if (this.readyState === 'complete') this.onload()">
-    </script>
-  
-    <!-- Moment.js -->
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script>
-    <script src="https://momentjs.com/downloads/moment-timezone-with-data-10-year-range.js"></script>
   </body>
 </html>
